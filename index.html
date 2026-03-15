@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soda Bet Tracker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header, .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 1px 8px rgba(15, 23, 42, 0.06);
+    }
+    .header {
+      padding: 24px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .title {
+      margin: 0 0 8px;
+      font-size: 32px;
+      font-weight: 800;
+    }
+    .subtitle {
+      margin: 0;
+      color: #475569;
+      font-size: 14px;
+    }
+    .players-pill {
+      background: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 18px;
+      color: #334155;
+      font-size: 14px;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .card {
+      padding: 20px;
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+    .big-number {
+      font-size: 32px;
+      font-weight: 800;
+      margin: 0;
+    }
+    .muted {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      font: inherit;
+    }
+    input, select {
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: white;
+      color: #0f172a;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #64748b;
+      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .span-2 {
+      grid-column: span 2;
+    }
+    .button {
+      border: none;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #0f172a;
+      color: white;
+    }
+    .button.secondary {
+      background: white;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+    .button.ghost {
+      background: transparent;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .balance-actions {
+      margin-top: 14px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+      background: #f1f5f9;
+      padding: 6px;
+      border-radius: 16px;
+    }
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #475569;
+    }
+    .tab-btn.active {
+      background: white;
+      color: #0f172a;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+    }
+
+    .bet-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .bet-top {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .bet-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .badge {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #0f172a;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+    .badge.settled {
+      background: #dbeafe;
+    }
+    .badge.reset {
+      background: #ede9fe;
+    }
+    .bet-meta {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .bet-time {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .empty {
+      border: 1px dashed #cbd5e1;
+      border-radius: 18px;
+      padding: 30px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .error {
+      color: #dc2626;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+    .small-delete {
+      width: auto;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard, .main-grid, .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .span-2 {
+        grid-column: span 1;
+      }
+      .actions {
+        grid-template-columns: 1fr;
+      }
+      .title {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1 class="title">Soda Bet Tracker</h1>
+        <p class="subtitle">Track active bets, settle results, and see who owes who sodas overall.</p>
+      </div>
+      <div class="players-pill"><strong>Players:</strong> Madan vs Pali</div>
+    </div>
+
+    <div class="dashboard">
+      <div class="card">
+        <h3>Balance</h3>
+        <p class="big-number" id="balanceText">0 sodas</p>
+        <p class="muted" id="balanceSummary">No one owes anything right now.</p>
+        <div class="balance-actions">
+          <button class="button" id="settleScoreBtn">Score settled</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Madan won</h3>
+        <p class="big-number" id="madanWon">0</p>
+        <p class="muted">total sodas</p>
+      </div>
+
+      <div class="card">
+        <h3>Pali won</h3>
+        <p class="big-number" id="paliWon">0</p>
+        <p class="muted">total sodas</p>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="card">
+        <h3 style="font-size: 22px; margin-bottom: 18px;">New Bet</h3>
+
+        <div class="form-grid">
+          <div class="span-2">
+            <label for="match">Match / Event</label>
+            <input id="match" placeholder="e.g. Team Liquid vs Fnatic" />
+          </div>
+
+          <div>
+            <label for="teamA">Team 1</label>
+            <input id="teamA" placeholder="First team" />
+          </div>
+
+          <div>
+            <label for="teamB">Team 2</label>
+            <input id="teamB" placeholder="Second team" />
+          </div>
+
+          <div>
+            <label for="madanChoice">Madan bets on</label>
+            <select id="madanChoice">
+              <option value="">Select team</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="paliChoice">Pali bets on</label>
+            <select id="paliChoice">
+              <option value="">Select team</option>
+            </select>
+          </div>
+
+          <div class="span-2">
+            <label for="sodas">How many sodas?</label>
+            <input id="sodas" type="number" min="1" value="1" />
+          </div>
+        </div>
+
+        <p class="error" id="formError" style="display:none;"></p>
+
+        <div style="margin-top:16px;">
+          <button class="button" id="createBetBtn">Create Bet</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size: 22px; margin-bottom: 18px;">Bet Center</h3>
+
+        <div class="tabs">
+          <button class="tab-btn active" id="activeTabBtn">Active Bets</button>
+          <button class="tab-btn" id="historyTabBtn">History</button>
+        </div>
+
+        <div id="activeTab"></div>
+        <div id="historyTab" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "soda-bet-tracker-static-v1";
+
+    const players = {
+      playerA: "Madan",
+      playerB: "Pali"
+    };
+
+    let state = {
+      bets: [],
+      balanceAdjustments: []
+    };
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        state.bets = parsed.bets || [];
+        state.balanceAdjustments = parsed.balanceAdjustments || [];
+      } catch (e) {
+        console.error("Failed to load state", e);
+      }
+    }
+
+    function formatDate(value) {
+      if (!value) return "—";
+      return new Date(value).toLocaleString();
+    }
+
+    function getSettledBets() {
+      return state.bets.filter(bet => bet.status === "settled");
+    }
+
+    function getActiveBets() {
+      return state.bets.filter(bet => bet.status === "open");
+    }
+
+    function getScoreboard() {
+      const settledBets = getSettledBets();
+      let aWon = 0;
+      let bWon = 0;
+
+      for (const bet of settledBets) {
+        if (bet.winner === "playerA") aWon += Number(bet.sodas || 0);
+        if (bet.winner === "playerB") bWon += Number(bet.sodas || 0);
+      }
+
+      let net = aWon - bWon;
+
+      for (const adjustment of state.balanceAdjustments) {
+        net -= Number(adjustment.netCleared || 0);
+      }
+
+      let balanceText = "0 sodas";
+      let summary = "No one owes anything right now.";
+
+      if (net > 0) {
+        balanceText = `${players.playerB} → ${players.playerA}: ${net}`;
+        summary = `${players.playerB} owes ${players.playerA} ${net} soda${net === 1 ? "" : "s"}`;
+      } else if (net < 0) {
+        balanceText = `${players.playerA} → ${players.playerB}: ${Math.abs(net)}`;
+        summary = `${players.playerA} owes ${players.playerB} ${Math.abs(net)} soda${Math.abs(net) === 1 ? "" : "s"}`;
+      }
+
+      return { aWon, bWon, net, balanceText, summary };
+    }
+
+    function getHistoryItems() {
+      const betItems = getSettledBets().map(bet => ({
+        ...bet,
+        historyType: "bet",
+        historyDate: bet.settledAt
+      }));
+
+      const adjustmentItems = state.balanceAdjustments.map(adjustment => ({
+        ...adjustment,
+        historyType: "balance_reset",
+        historyDate: adjustment.createdAt
+      }));
+
+      return [...betItems, ...adjustmentItems].sort(
+        (a, b) => new Date(b.historyDate).getTime() - new Date(a.historyDate).getTime()
+      );
+    }
+
+    function updateChoiceDropdowns() {
+      const teamA = document.getElementById("teamA").value.trim();
+      const teamB = document.getElementById("teamB").value.trim();
+      const madanChoice = document.getElementById("madanChoice");
+      const paliChoice = document.getElementById("paliChoice");
+
+      const currentMadan = madanChoice.value;
+      const currentPali = paliChoice.value;
+
+      madanChoice.innerHTML = '<option value="">Select team</option>';
+      paliChoice.innerHTML = '<option value="">Select team</option>';
+
+      [teamA, teamB].filter(Boolean).forEach(team => {
+        const optionA = document.createElement("option");
+        optionA.value = team;
+        optionA.textContent = team;
+        madanChoice.appendChild(optionA);
+
+        const optionB = document.createElement("option");
+        optionB.value = team;
+        optionB.textContent = team;
+        paliChoice.appendChild(optionB);
+      });
+
+      if ([teamA, teamB].includes(currentMadan)) madanChoice.value = currentMadan;
+      if ([teamA, teamB].includes(currentPali)) paliChoice.value = currentPali;
+    }
+
+    function resetForm() {
+      document.getElementById("match").value = "";
+      document.getElementById("teamA").value = "";
+      document.getElementById("teamB").value = "";
+      document.getElementById("madanChoice").innerHTML = '<option value="">Select team</option>';
+      document.getElementById("paliChoice").innerHTML = '<option value="">Select team</option>';
+      document.getElementById("sodas").value = 1;
+      hideError();
+    }
+
+    function showError(message) {
+      const error = document.getElementById("formError");
+      error.textContent = message;
+      error.style.display = "block";
+    }
+
+    function hideError() {
+      const error = document.getElementById("formError");
+      error.textContent = "";
+      error.style.display = "none";
+    }
+
+    function createBet() {
+      const match = document.getElementById("match").value.trim();
+      const teamA = document.getElementById("teamA").value.trim();
+      const teamB = document.getElementById("teamB").value.trim();
+      const bettorAChoice = document.getElementById("madanChoice").value;
+      const bettorBChoice = document.getElementById("paliChoice").value;
+      const sodas = Number(document.getElementById("sodas").value);
+
+      if (!teamA || !teamB || !bettorAChoice || !bettorBChoice) {
+        showError("Please fill in all required fields.");
+        return;
+      }
+
+      if (bettorAChoice === bettorBChoice) {
+        showError("Each person must pick a different team.");
+        return;
+      }
+
+      if (!sodas || sodas < 1) {
+        showError("Sodas must be at least 1.");
+        return;
+      }
+
+      hideError();
+
+      state.bets.unshift({
+        id: crypto.randomUUID(),
+        match,
+        teamA,
+        teamB,
+        bettorAChoice,
+        bettorBChoice,
+        sodas,
+        status: "open",
+        createdAt: new Date().toISOString(),
+        settledAt: null,
+        winner: null,
+        winningTeam: null
+      });
+
+      saveState();
+      resetForm();
+      render();
+    }
+
+    function settleBet(betId, winningTeam) {
+      state.bets = state.bets.map(bet => {
+        if (bet.id !== betId || bet.status !== "open") return bet;
+
+        let winner = null;
+        if (bet.bettorAChoice === winningTeam) winner = "playerA";
+        if (bet.bettorBChoice === winningTeam) winner = "playerB";
+
+        return {
+          ...bet,
+          status: "settled",
+          winner,
+          winningTeam,
+          settledAt: new Date().toISOString()
+        };
+      });
+
+      saveState();
+      render();
+    }
+
+    function deleteBet(betId) {
+      state.bets = state.bets.filter(bet => bet.id !== betId);
+      saveState();
+      render();
+    }
+
+    function settleScore() {
+      const scoreboard = getScoreboard();
+      if (scoreboard.net === 0) return;
+
+      const adjustment = {
+        id: crypto.randomUUID(),
+        type: "balance_reset",
+        createdAt: new Date().toISOString(),
+        netCleared: scoreboard.net,
+        summary:
+          scoreboard.net > 0
+            ? `Balance settled: ${players.playerB} paid ${players.playerA} ${scoreboard.net} soda${scoreboard.net === 1 ? "" : "s"}`
+            : `Balance settled: ${players.playerA} paid ${players.playerB} ${Math.abs(scoreboard.net)} soda${Math.abs(scoreboard.net) === 1 ? "" : "s"}`
+      };
+
+      state.balanceAdjustments.unshift(adjustment);
+      saveState();
+      render();
+    }
+
+    function renderDashboard() {
+      const scoreboard = getScoreboard();
+      document.getElementById("balanceText").textContent = scoreboard.balanceText;
+      document.getElementById("balanceSummary").textContent = scoreboard.summary;
+      document.getElementById("madanWon").textContent = scoreboard.aWon;
+      document.getElementById("paliWon").textContent = scoreboard.bWon;
+      document.getElementById("settleScoreBtn").disabled = scoreboard.net === 0;
+    }
+
+    function renderActiveBets() {
+      const active = getActiveBets();
+      const container = document.getElementById("activeTab");
+
+      if (active.length === 0) {
+        container.innerHTML = '<div class="empty">No active bets yet.</div>';
+        return;
+      }
+
+      container.innerHTML = active.map(bet => `
+        <div class="bet-item">
+          <div class="bet-top">
+            <div>
+              <h4 class="bet-title">
+                ${escapeHtml(bet.match || `${bet.teamA} vs ${bet.teamB}`)}
+                <span class="badge">${bet.sodas} soda${bet.sodas === 1 ? "" : "s"}</span>
+              </h4>
+              <div class="bet-meta">
+                <strong>${players.playerA}</strong> → ${escapeHtml(bet.bettorAChoice)}
+                &nbsp; | &nbsp;
+                <strong>${players.playerB}</strong> → ${escapeHtml(bet.bettorBChoice)}
+              </div>
+              <div class="bet-time">Created: ${formatDate(bet.createdAt)}</div>
+            </div>
+            <button class="button ghost small-delete" onclick="deleteBet('${bet.id}')">Delete</button>
+          </div>
+          <div class="actions">
+            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.teamA)})">${escapeHtml(bet.teamA)} won</button>
+            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.teamB)})">${escapeHtml(bet.teamB)} won</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderHistory() {
+      const history = getHistoryItems();
+      const container = document.getElementById("historyTab");
+
+      if (history.length === 0) {
+        container.innerHTML = '<div class="empty">No history yet.</div>';
+        return;
+      }
+
+      container.innerHTML = history.map(item => {
+        if (item.historyType === "balance_reset") {
+          return `
+            <div class="bet-item">
+              <h4 class="bet-title">
+                Score settled
+                <span class="badge reset">Balance Reset</span>
+              </h4>
+              <div class="bet-meta">${escapeHtml(item.summary)}</div>
+              <div class="bet-time">Recorded: ${formatDate(item.createdAt)}</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bet-item">
+            <div class="bet-top">
+              <div>
+                <h4 class="bet-title">
+                  ${escapeHtml(item.match || `${item.teamA} vs ${item.teamB}`)}
+                  <span class="badge settled">Settled</span>
+                </h4>
+                <div class="bet-meta">Winner: <strong>${escapeHtml(item.winningTeam)}</strong></div>
+                <div class="bet-meta">
+                  Bet result: <strong>${item.winner === "playerA" ? players.playerA : players.playerB}</strong>
+                  won ${item.sodas} soda${item.sodas === 1 ? "" : "s"}
+                </div>
+                <div class="bet-time">Settled: ${formatDate(item.settledAt)}</div>
+              </div>
+              <button class="button ghost small-delete" onclick="deleteBet('${item.id}')">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function render() {
+      renderDashboard();
+      renderActiveBets();
+      renderHistory();
+    }
+
+    function setTab(tab) {
+      const activeTabBtn = document.getElementById("activeTabBtn");
+      const historyTabBtn = document.getElementById("historyTabBtn");
+      const activeTab = document.getElementById("activeTab");
+      const historyTab = document.getElementById("historyTab");
+
+      if (tab === "active") {
+        activeTabBtn.classList.add("active");
+        historyTabBtn.classList.remove("active");
+        activeTab.style.display = "block";
+        historyTab.style.display = "none";
+      } else {
+        historyTabBtn.classList.add("active");
+        activeTabBtn.classList.remove("active");
+        historyTab.style.display = "block";
+        activeTab.style.display = "none";
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.getElementById("teamA").addEventListener("input", updateChoiceDropdowns);
+    document.getElementById("teamB").addEventListener("input", updateChoiceDropdowns);
+    document.getElementById("createBetBtn").addEventListener("click", createBet);
+    document.getElementById("settleScoreBtn").addEventListener("click", settleScore);
+    document.getElementById("activeTabBtn").addEventListener("click", () => setTab("active"));
+    document.getElementById("historyTabBtn").addEventListener("click", () => setTab("history"));
+
+    loadState();
+    render();
+  </script>
+</body>
+</html>
