@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Soda Bet Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -48,7 +49,6 @@
       color: #334155;
       font-size: 14px;
     }
-
     .dashboard {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -71,20 +71,18 @@
       color: #64748b;
       font-size: 14px;
     }
-
     .main-grid {
       display: grid;
       grid-template-columns: 1fr 1.3fr;
       gap: 20px;
     }
-
     label {
       display: block;
       font-size: 14px;
       font-weight: 600;
       margin-bottom: 8px;
     }
-    input, select, button, textarea {
+    input, select, button {
       width: 100%;
       font: inherit;
     }
@@ -94,11 +92,6 @@
       padding: 12px 14px;
       background: white;
       color: #0f172a;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #64748b;
-      box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12);
     }
     .form-grid {
       display: grid;
@@ -126,16 +119,15 @@
       background: transparent;
       color: #475569;
       border: 1px solid #e2e8f0;
+      width: auto;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 13px;
     }
     .button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
-
-    .balance-actions {
-      margin-top: 14px;
-    }
-
     .tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -159,7 +151,6 @@
       color: #0f172a;
       box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
     }
-
     .bet-item {
       border: 1px solid #e2e8f0;
       border-radius: 18px;
@@ -187,12 +178,8 @@
       font-weight: 700;
       margin-left: 8px;
     }
-    .badge.settled {
-      background: #dbeafe;
-    }
-    .badge.reset {
-      background: #ede9fe;
-    }
+    .badge.settled { background: #dbeafe; }
+    .badge.reset { background: #ede9fe; }
     .bet-meta {
       margin-top: 10px;
       font-size: 14px;
@@ -221,13 +208,11 @@
       font-size: 14px;
       margin-top: 6px;
     }
-    .small-delete {
-      width: auto;
-      padding: 8px 12px;
-      border-radius: 12px;
+    .status {
+      margin-top: 10px;
       font-size: 13px;
+      color: #475569;
     }
-
     @media (max-width: 900px) {
       .dashboard, .main-grid, .form-grid {
         grid-template-columns: 1fr;
@@ -257,9 +242,9 @@
     <div class="dashboard">
       <div class="card">
         <h3>Balance</h3>
-        <p class="big-number" id="balanceText">0 sodas</p>
-        <p class="muted" id="balanceSummary">No one owes anything right now.</p>
-        <div class="balance-actions">
+        <p class="big-number" id="balanceText">Loading...</p>
+        <p class="muted" id="balanceSummary">Please wait...</p>
+        <div style="margin-top: 14px;">
           <button class="button" id="settleScoreBtn">Score settled</button>
         </div>
       </div>
@@ -318,6 +303,7 @@
         </div>
 
         <p class="error" id="formError" style="display:none;"></p>
+        <p class="status" id="appStatus"></p>
 
         <div style="margin-top:16px;">
           <button class="button" id="createBetBtn">Create Bet</button>
@@ -339,45 +325,55 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "soda-bet-tracker-static-v1";
+    const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
+    const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const players = {
       playerA: "Madan",
       playerB: "Pali"
     };
 
-    let state = {
-      bets: [],
-      balanceAdjustments: []
-    };
-
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        state.bets = parsed.bets || [];
-        state.balanceAdjustments = parsed.balanceAdjustments || [];
-      } catch (e) {
-        console.error("Failed to load state", e);
-      }
-    }
+    let bets = [];
+    let balanceAdjustments = [];
 
     function formatDate(value) {
       if (!value) return "—";
       return new Date(value).toLocaleString();
     }
 
-    function getSettledBets() {
-      return state.bets.filter(bet => bet.status === "settled");
+    function setStatus(text) {
+      document.getElementById("appStatus").textContent = text || "";
+    }
+
+    function showError(message) {
+      const error = document.getElementById("formError");
+      error.textContent = message;
+      error.style.display = "block";
+    }
+
+    function hideError() {
+      const error = document.getElementById("formError");
+      error.textContent = "";
+      error.style.display = "none";
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
     }
 
     function getActiveBets() {
-      return state.bets.filter(bet => bet.status === "open");
+      return bets.filter(bet => bet.status === "open");
+    }
+
+    function getSettledBets() {
+      return bets.filter(bet => bet.status === "settled");
     }
 
     function getScoreboard() {
@@ -392,8 +388,8 @@
 
       let net = aWon - bWon;
 
-      for (const adjustment of state.balanceAdjustments) {
-        net -= Number(adjustment.netCleared || 0);
+      for (const adjustment of balanceAdjustments) {
+        net -= Number(adjustment.net_cleared || 0);
       }
 
       let balanceText = "0 sodas";
@@ -414,13 +410,13 @@
       const betItems = getSettledBets().map(bet => ({
         ...bet,
         historyType: "bet",
-        historyDate: bet.settledAt
+        historyDate: bet.settled_at
       }));
 
-      const adjustmentItems = state.balanceAdjustments.map(adjustment => ({
+      const adjustmentItems = balanceAdjustments.map(adjustment => ({
         ...adjustment,
         historyType: "balance_reset",
-        historyDate: adjustment.createdAt
+        historyDate: adjustment.created_at
       }));
 
       return [...betItems, ...adjustmentItems].sort(
@@ -466,19 +462,32 @@
       hideError();
     }
 
-    function showError(message) {
-      const error = document.getElementById("formError");
-      error.textContent = message;
-      error.style.display = "block";
+    async function loadData() {
+      setStatus("Loading shared data...");
+
+      const { data: betsData, error: betsError } = await supabase
+        .from("bets")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      const { data: adjustmentsData, error: adjustmentsError } = await supabase
+        .from("balance_adjustments")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (betsError || adjustmentsError) {
+        console.error(betsError || adjustmentsError);
+        setStatus("Could not load shared data.");
+        return;
+      }
+
+      bets = betsData || [];
+      balanceAdjustments = adjustmentsData || [];
+      setStatus("Shared app connected.");
+      render();
     }
 
-    function hideError() {
-      const error = document.getElementById("formError");
-      error.textContent = "";
-      error.style.display = "none";
-    }
-
-    function createBet() {
+    async function createBet() {
       const match = document.getElementById("match").value.trim();
       const teamA = document.getElementById("teamA").value.trim();
       const teamB = document.getElementById("teamB").value.trim();
@@ -502,72 +511,97 @@
       }
 
       hideError();
+      setStatus("Creating bet...");
 
-      state.bets.unshift({
-        id: crypto.randomUUID(),
+      const { error } = await supabase.from("bets").insert({
         match,
-        teamA,
-        teamB,
-        bettorAChoice,
-        bettorBChoice,
+        team_a: teamA,
+        team_b: teamB,
+        bettor_a_choice: bettorAChoice,
+        bettor_b_choice: bettorBChoice,
         sodas,
-        status: "open",
-        createdAt: new Date().toISOString(),
-        settledAt: null,
-        winner: null,
-        winningTeam: null
+        status: "open"
       });
 
-      saveState();
+      if (error) {
+        console.error(error);
+        setStatus("Failed to create bet.");
+        return;
+      }
+
       resetForm();
-      render();
+      await loadData();
     }
 
-    function settleBet(betId, winningTeam) {
-      state.bets = state.bets.map(bet => {
-        if (bet.id !== betId || bet.status !== "open") return bet;
+    async function settleBet(betId, winningTeam) {
+      const bet = bets.find(b => b.id === betId);
+      if (!bet) return;
 
-        let winner = null;
-        if (bet.bettorAChoice === winningTeam) winner = "playerA";
-        if (bet.bettorBChoice === winningTeam) winner = "playerB";
+      let winner = null;
+      if (bet.bettor_a_choice === winningTeam) winner = "playerA";
+      if (bet.bettor_b_choice === winningTeam) winner = "playerB";
 
-        return {
-          ...bet,
+      setStatus("Settling bet...");
+
+      const { error } = await supabase
+        .from("bets")
+        .update({
           status: "settled",
           winner,
-          winningTeam,
-          settledAt: new Date().toISOString()
-        };
-      });
+          winning_team: winningTeam,
+          settled_at: new Date().toISOString()
+        })
+        .eq("id", betId);
 
-      saveState();
-      render();
+      if (error) {
+        console.error(error);
+        setStatus("Failed to settle bet.");
+        return;
+      }
+
+      await loadData();
     }
 
-    function deleteBet(betId) {
-      state.bets = state.bets.filter(bet => bet.id !== betId);
-      saveState();
-      render();
+    async function deleteBet(betId) {
+      setStatus("Deleting bet...");
+
+      const { error } = await supabase
+        .from("bets")
+        .delete()
+        .eq("id", betId);
+
+      if (error) {
+        console.error(error);
+        setStatus("Failed to delete bet.");
+        return;
+      }
+
+      await loadData();
     }
 
-    function settleScore() {
+    async function settleScore() {
       const scoreboard = getScoreboard();
       if (scoreboard.net === 0) return;
 
-      const adjustment = {
-        id: crypto.randomUUID(),
-        type: "balance_reset",
-        createdAt: new Date().toISOString(),
-        netCleared: scoreboard.net,
-        summary:
-          scoreboard.net > 0
-            ? `Balance settled: ${players.playerB} paid ${players.playerA} ${scoreboard.net} soda${scoreboard.net === 1 ? "" : "s"}`
-            : `Balance settled: ${players.playerA} paid ${players.playerB} ${Math.abs(scoreboard.net)} soda${Math.abs(scoreboard.net) === 1 ? "" : "s"}`
-      };
+      const summary =
+        scoreboard.net > 0
+          ? `Balance settled: ${players.playerB} paid ${players.playerA} ${scoreboard.net} soda${scoreboard.net === 1 ? "" : "s"}`
+          : `Balance settled: ${players.playerA} paid ${players.playerB} ${Math.abs(scoreboard.net)} soda${Math.abs(scoreboard.net) === 1 ? "" : "s"}`;
 
-      state.balanceAdjustments.unshift(adjustment);
-      saveState();
-      render();
+      setStatus("Recording balance settlement...");
+
+      const { error } = await supabase.from("balance_adjustments").insert({
+        net_cleared: scoreboard.net,
+        summary
+      });
+
+      if (error) {
+        console.error(error);
+        setStatus("Failed to settle score.");
+        return;
+      }
+
+      await loadData();
     }
 
     function renderDashboard() {
@@ -593,21 +627,21 @@
           <div class="bet-top">
             <div>
               <h4 class="bet-title">
-                ${escapeHtml(bet.match || `${bet.teamA} vs ${bet.teamB}`)}
+                ${escapeHtml(bet.match || `${bet.team_a} vs ${bet.team_b}`)}
                 <span class="badge">${bet.sodas} soda${bet.sodas === 1 ? "" : "s"}</span>
               </h4>
               <div class="bet-meta">
-                <strong>${players.playerA}</strong> → ${escapeHtml(bet.bettorAChoice)}
+                <strong>${players.playerA}</strong> → ${escapeHtml(bet.bettor_a_choice)}
                 &nbsp; | &nbsp;
-                <strong>${players.playerB}</strong> → ${escapeHtml(bet.bettorBChoice)}
+                <strong>${players.playerB}</strong> → ${escapeHtml(bet.bettor_b_choice)}
               </div>
-              <div class="bet-time">Created: ${formatDate(bet.createdAt)}</div>
+              <div class="bet-time">Created: ${formatDate(bet.created_at)}</div>
             </div>
-            <button class="button ghost small-delete" onclick="deleteBet('${bet.id}')">Delete</button>
+            <button class="button ghost" onclick="deleteBet('${bet.id}')">Delete</button>
           </div>
           <div class="actions">
-            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.teamA)})">${escapeHtml(bet.teamA)} won</button>
-            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.teamB)})">${escapeHtml(bet.teamB)} won</button>
+            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.team_a)})">${escapeHtml(bet.team_a)} won</button>
+            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.team_b)})">${escapeHtml(bet.team_b)} won</button>
           </div>
         </div>
       `).join("");
@@ -631,7 +665,7 @@
                 <span class="badge reset">Balance Reset</span>
               </h4>
               <div class="bet-meta">${escapeHtml(item.summary)}</div>
-              <div class="bet-time">Recorded: ${formatDate(item.createdAt)}</div>
+              <div class="bet-time">Recorded: ${formatDate(item.created_at)}</div>
             </div>
           `;
         }
@@ -641,17 +675,17 @@
             <div class="bet-top">
               <div>
                 <h4 class="bet-title">
-                  ${escapeHtml(item.match || `${item.teamA} vs ${item.teamB}`)}
+                  ${escapeHtml(item.match || `${item.team_a} vs ${item.team_b}`)}
                   <span class="badge settled">Settled</span>
                 </h4>
-                <div class="bet-meta">Winner: <strong>${escapeHtml(item.winningTeam)}</strong></div>
+                <div class="bet-meta">Winner: <strong>${escapeHtml(item.winning_team)}</strong></div>
                 <div class="bet-meta">
                   Bet result: <strong>${item.winner === "playerA" ? players.playerA : players.playerB}</strong>
                   won ${item.sodas} soda${item.sodas === 1 ? "" : "s"}
                 </div>
-                <div class="bet-time">Settled: ${formatDate(item.settledAt)}</div>
+                <div class="bet-time">Settled: ${formatDate(item.settled_at)}</div>
               </div>
-              <button class="button ghost small-delete" onclick="deleteBet('${item.id}')">Delete</button>
+              <button class="button ghost" onclick="deleteBet('${item.id}')">Delete</button>
             </div>
           </div>
         `;
@@ -683,15 +717,6 @@
       }
     }
 
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
     document.getElementById("teamA").addEventListener("input", updateChoiceDropdowns);
     document.getElementById("teamB").addEventListener("input", updateChoiceDropdowns);
     document.getElementById("createBetBtn").addEventListener("click", createBet);
@@ -699,8 +724,8 @@
     document.getElementById("activeTabBtn").addEventListener("click", () => setTab("active"));
     document.getElementById("historyTabBtn").addEventListener("click", () => setTab("history"));
 
-    loadState();
-    render();
+    loadData();
+    setInterval(loadData, 4000);
   </script>
 </body>
 </html>
