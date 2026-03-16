@@ -509,12 +509,6 @@
   }
 }
 
-      bets = betsData || [];
-      balanceAdjustments = adjustmentsData || [];
-      setStatus("Shared app connected.");
-      render();
-    }
-
     async function createBet() {
       const match = document.getElementById("match").value.trim();
       const teamA = document.getElementById("teamA").value.trim();
