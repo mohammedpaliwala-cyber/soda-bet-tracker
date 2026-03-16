@@ -463,23 +463,51 @@
     }
 
     async function loadData() {
-      setStatus("Loading shared data...");
+  setStatus("Loading shared data...");
 
-      const { data: betsData, error: betsError } = await supabase
-        .from("bets")
-        .select("*")
-        .order("created_at", { ascending: false });
+  try {
+    const { data: betsData, error: betsError } = await supabase
+      .from("bets")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      const { data: adjustmentsData, error: adjustmentsError } = await supabase
-        .from("balance_adjustments")
-        .select("*")
-        .order("created_at", { ascending: false });
+    const { data: adjustmentsData, error: adjustmentsError } = await supabase
+      .from("balance_adjustments")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (betsError || adjustmentsError) {
-        console.error(betsError || adjustmentsError);
-        setStatus("Could not load shared data.");
-        return;
-      }
+    if (betsError) {
+      console.error("betsError:", betsError);
+    }
+
+    if (adjustmentsError) {
+      console.error("adjustmentsError:", adjustmentsError);
+    }
+
+    bets = betsData || [];
+    balanceAdjustments = adjustmentsData || [];
+
+    render();
+
+    if (betsError || adjustmentsError) {
+      setStatus(
+        "Connected, but one table failed: " +
+        [
+          betsError ? `bets: ${betsError.message}` : null,
+          adjustmentsError ? `balance_adjustments: ${adjustmentsError.message}` : null
+        ].filter(Boolean).join(" | ")
+      );
+    } else {
+      setStatus("Shared app connected.");
+    }
+  } catch (err) {
+    console.error("loadData crash:", err);
+    setStatus("App crashed while loading: " + (err.message || "unknown error"));
+    bets = [];
+    balanceAdjustments = [];
+    render();
+  }
+}
 
       bets = betsData || [];
       balanceAdjustments = adjustmentsData || [];
