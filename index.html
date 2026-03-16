@@ -636,39 +636,52 @@
     }
 
     function renderActiveBets() {
-      const active = getActiveBets();
-      const container = document.getElementById("activeTab");
+  const active = getActiveBets();
+  const container = document.getElementById("activeTab");
 
-      if (active.length === 0) {
-        container.innerHTML = '<div class="empty">No active bets yet.</div>';
-        return;
-      }
+  if (active.length === 0) {
+    container.innerHTML = '<div class="empty">No active bets yet.</div>';
+    return;
+  }
 
-      container.innerHTML = active.map(bet => `
-        <div class="bet-item">
-          <div class="bet-top">
-            <div>
-              <h4 class="bet-title">
-                ${escapeHtml(bet.match || `${bet.team_a} vs ${bet.team_b}`)}
-                <span class="badge">${bet.sodas} soda${bet.sodas === 1 ? "" : "s"}</span>
-              </h4>
-              <div class="bet-meta">
-                <strong>${players.playerA}</strong> → ${escapeHtml(bet.bettor_a_choice)}
-                &nbsp; | &nbsp;
-                <strong>${players.playerB}</strong> → ${escapeHtml(bet.bettor_b_choice)}
-              </div>
-              <div class="bet-time">Created: ${formatDate(bet.created_at)}</div>
-            </div>
-            <button class="button ghost" onclick="deleteBet('${bet.id}')">Delete</button>
+  container.innerHTML = active.map(bet => `
+    <div class="bet-item">
+      <div class="bet-top">
+        <div>
+          <h4 class="bet-title">
+            ${escapeHtml(bet.match || `${bet.team_a} vs ${bet.team_b}`)}
+            <span class="badge">${bet.sodas} soda${bet.sodas === 1 ? "" : "s"}</span>
+          </h4>
+          <div class="bet-meta">
+            <strong>${players.playerA}</strong> → ${escapeHtml(bet.bettor_a_choice)}
+            &nbsp; | &nbsp;
+            <strong>${players.playerB}</strong> → ${escapeHtml(bet.bettor_b_choice)}
           </div>
-          <div class="actions">
-            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.team_a)})">${escapeHtml(bet.team_a)} won</button>
-            <button class="button secondary" onclick="settleBet('${bet.id}', ${JSON.stringify(bet.team_b)})">${escapeHtml(bet.team_b)} won</button>
-          </div>
+          <div class="bet-time">Created: ${formatDate(bet.created_at)}</div>
         </div>
-      `).join("");
-    }
-
+        <button class="button ghost" onclick="deleteBet('${bet.id}')">Delete</button>
+      </div>
+      <div class="actions">
+        <button
+          class="button secondary"
+          data-bet-id="${bet.id}"
+          data-team="${escapeHtml(bet.team_a)}"
+          onclick="settleBet(this.dataset.betId, this.dataset.team)"
+        >
+          ${escapeHtml(bet.team_a)} won
+        </button>
+        <button
+          class="button secondary"
+          data-bet-id="${bet.id}"
+          data-team="${escapeHtml(bet.team_b)}"
+          onclick="settleBet(this.dataset.betId, this.dataset.team)"
+        >
+          ${escapeHtml(bet.team_b)} won
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
     function renderHistory() {
       const history = getHistoryItems();
       const container = document.getElementById("historyTab");
